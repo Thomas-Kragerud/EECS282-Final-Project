@@ -1341,7 +1341,7 @@ def main(args):
                         image = Image.open(image)
                         with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, image=image, generator=generator).images[0]
-                        images.append(image)
+                            images.append(image)
 
                 for tracker in accelerator.trackers:
                     if tracker.name == "tensorboard":
