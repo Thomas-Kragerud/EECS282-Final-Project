@@ -164,11 +164,25 @@ def parse_args(input_args=None):
         help="A folder containing the training data of instance images.",
     )
     parser.add_argument(
+        "--instance_validation_dir",
+        type=str,
+        default=None,
+        required=True,
+        help="A folder containing generated instance images during training.",
+    )
+    parser.add_argument(
         "--class_data_dir",
         type=str,
         default=None,
         required=False,
         help="A folder containing the training data of class images.",
+    )
+    parser.add_argument(
+        "--class_validation_dir",
+        type=str,
+        default=None,
+        required=False,
+        help="A folder containing the validation data of class images.",
     )
     parser.add_argument(
         "--instance_prompt",
@@ -442,6 +456,13 @@ def parse_args(input_args=None):
         default=4,
         help=("The dimension of the LoRA update matrices."),
     )
+    parser.add_argument(
+        "--validation_data_dir",
+        type=str,
+        default=None,
+        required=False,
+        help="A folder containing the images generated for validation.",
+    ) 
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -1311,15 +1332,21 @@ def main(args):
                 if args.validation_images is None:
                     images = []
                     for _ in range(args.num_validation_images):
-                        with torch.cuda.amp.autocast():
+                        #breakpoint()
+                        with torch.cpu.amp.autocast():
                             image = pipeline(**pipeline_args, generator=generator).images[0]
                             images.append(image)
+                        '''with torch.cuda.amp.autocast(): # Er dette problematisk når vi kjører gpu?
+                            image = pipeline(**pipeline_args, generator=generator).images[0]
+                            images.append(image)'''
                 else:
                     images = []
                     for image in args.validation_images:
                         image = Image.open(image)
-                        with torch.cuda.amp.autocast():
+                        with torch.cpu.amp.autocast():
                             image = pipeline(**pipeline_args, image=image, generator=generator).images[0]
+                        '''with torch.cuda.amp.autocast():
+                            image = pipeline(**pipeline_args, image=image, generator=generator).images[0]'''
                         images.append(image)
 
                 for tracker in accelerator.trackers:
@@ -1335,6 +1362,45 @@ def main(args):
                                 ]
                             }
                         )
+
+                if args.validation_data_dir is not None:
+                    # Save images to directory
+                    validation_dir = Path(args.validation_data_dir)
+                    if not validation_dir.exists():
+                        validation_dir.mkdir(parents=True)
+
+                    for i, image in enumerate(images):
+                        image_filename = validation_dir / f"{epoch}-{i}.jpg"
+                        image.save(image_filename)
+
+                if args.class_validation_dir is not None:
+
+                    pipeline_args = {"prompt": args.class_prompt}
+
+                    # Save images to directory
+                    class_validation_dir = Path(args.class_validation_dir)
+                    if not class_validation_dir.exists():
+                        class_validation_dir.mkdir(parents=True)
+
+                    for i in range(5):
+                        with torch.cuda.amp.autocast():
+                            image = pipeline(**pipeline_args, generator=generator).images[0]
+                            image_filename = instance_validation_dir / f"{epoch}-{i}.jpg"
+                            image.save(image_filename)
+
+                if args.instance_validation_dir is not None:
+
+                    pipeline_args = {"prompt": args.instance_prompt}
+                    instance_validation_dir = Path(args.instance_validation_dir)
+                    if not instance_validation_dir.exists():
+                        instance_validation_dir.mkdir(parents=True)
+
+                    for i in range(5):
+                        with torch.cuda.amp.autocast():
+                            image = pipeline(**pipeline_args, generator=generator).images[0]
+                            image_filename = instance_validation_dir / f"{epoch}-{i}.jpg"
+                            image.save(image_filename)
+                        #image = pipeline(**pipeline_args, generator=generator).images[0]
 
                 del pipeline
                 torch.cuda.empty_cache()
