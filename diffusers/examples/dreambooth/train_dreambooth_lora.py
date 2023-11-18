@@ -1332,21 +1332,15 @@ def main(args):
                 if args.validation_images is None:
                     images = []
                     for _ in range(args.num_validation_images):
-                        #breakpoint()
-                        with torch.cpu.amp.autocast():
+                        with torch.cuda.amp.autocast(): # Er dette problematisk når vi kjører gpu?
                             image = pipeline(**pipeline_args, generator=generator).images[0]
                             images.append(image)
-                        '''with torch.cuda.amp.autocast(): # Er dette problematisk når vi kjører gpu?
-                            image = pipeline(**pipeline_args, generator=generator).images[0]
-                            images.append(image)'''
                 else:
                     images = []
                     for image in args.validation_images:
                         image = Image.open(image)
-                        with torch.cpu.amp.autocast():
+                        with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, image=image, generator=generator).images[0]
-                        '''with torch.cuda.amp.autocast():
-                            image = pipeline(**pipeline_args, image=image, generator=generator).images[0]'''
                         images.append(image)
 
                 for tracker in accelerator.trackers:
