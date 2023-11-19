@@ -24,6 +24,8 @@ import os
 import shutil
 import warnings
 from pathlib import Path
+from cleanfid import fid
+from glob import glob
 
 import numpy as np
 import torch
@@ -1359,7 +1361,7 @@ def main(args):
 
                 if args.validation_data_dir is not None:
                     # Save images to directory
-                    validation_dir = Path(args.validation_data_dir)
+                    validation_dir = Path(args.validation_data_dir) / Path(str(epoch))
                     if not validation_dir.exists():
                         validation_dir.mkdir(parents=True)
 
@@ -1372,7 +1374,7 @@ def main(args):
                     pipeline_args = {"prompt": args.class_prompt}
 
                     # Save images to directory
-                    class_validation_dir = Path(args.class_validation_dir)
+                    class_validation_dir = Path(args.class_validation_dir) / Path(str(epoch))
                     if not class_validation_dir.exists():
                         class_validation_dir.mkdir(parents=True)
 
@@ -1385,7 +1387,7 @@ def main(args):
                 if args.instance_validation_dir is not None:
 
                     pipeline_args = {"prompt": args.instance_prompt}
-                    instance_validation_dir = Path(args.instance_validation_dir)
+                    instance_validation_dir = Path(args.instance_validation_dir) / Path(str(epoch))
                     if not instance_validation_dir.exists():
                         instance_validation_dir.mkdir(parents=True)
 
@@ -1465,6 +1467,42 @@ def main(args):
                             ]
                         }
                     )
+
+        # Calculate KID
+        kid_entries = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+        kid_entries = [entry for entry in kid_entries if entry is not None]
+
+        for entry1 in kid_entries:
+            for entry2  in kid_entries:
+                if entry1 != entry2:
+
+
+                    entry1_subfolders = sorted([x.strip(".-") for x in glob(entry1 + "/*/")])
+                    entry2_subfolders = sorted([x.strip(".-") for x in glob(entry2 + "/*/")])
+
+                    if len(entry1_subfolders) == 0:
+                        entry1_subfolders = [Path(entry1)]
+                    else:
+                        entry1_subfolders = [Path(entry1) / Path(x) for x in entry1_subfolders]
+
+                    if len(entry2_subfolders) == 0:
+                        entry2_subfolders = [Path(entry2)]
+
+                    else:
+                        entry2_subfolders = [Path(entry2) / Path(x) for x in entry1_subfolders]
+
+                    kids = []
+                    for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                        kids.append(fid.calculate_kid(entry1_subfolders[min(len(entry1_subfolders)-1, i)],
+                                                      entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
+                        
+                    data = [[i, y] for (i, y) in enumerate(kids)]
+                    table = wandb.Table(data=data, columns = ["Epoch", "KID"])
+                    wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
+                               title=f"KID for {entry1} and {entry2}")})
+                        
+                    
+            
 
         if args.push_to_hub:
             save_model_card(
