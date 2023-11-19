@@ -1381,7 +1381,7 @@ def main(args):
                     for i in range(5):
                         with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, generator=generator).images[0]
-                            image_filename = instance_validation_dir / f"{epoch}-{i}.jpg"
+                            image_filename = class_validation_dir / f"{epoch}-{i}.jpg"
                             image.save(image_filename)
 
                 if args.instance_validation_dir is not None:
