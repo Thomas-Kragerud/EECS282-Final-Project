@@ -1469,37 +1469,40 @@ def main(args):
                     )
 
         # Calculate KID
-        kid_entries = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
-        kid_entries = [entry for entry in kid_entries if entry is not None]
+        kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+        kid_entries_1 = [entry for entry in kid_entries_l if entry is not None]
 
-        for entry1 in kid_entries:
-            for entry2  in kid_entries:
-                if entry1 != entry2:
+        kid_entries = set()
+        for e1 in kid_entries_l:
+            for e2 in kid_entries_1:
+                if e1 != e2:
+                    kid_entries.add(frozenset({e1, e2}))
 
+        for entry1, entry2 in kid_entries:
+        
+            entry1_subfolders = sorted(glob(entry1 + "/*/"))
+            entry2_subfolders = sorted(glob(entry2 + "/*/"))
 
-                    entry1_subfolders = sorted([x.strip(".-") for x in glob(entry1 + "/*/")])
-                    entry2_subfolders = sorted([x.strip(".-") for x in glob(entry2 + "/*/")])
+            if len(entry1_subfolders) == 0:
+                entry1_subfolders = [Path(entry1)]
+            else:
+                entry1_subfolders = [Path(x) for x in entry1_subfolders]
 
-                    if len(entry1_subfolders) == 0:
-                        entry1_subfolders = [Path(entry1)]
-                    else:
-                        entry1_subfolders = [Path(entry1) / Path(x) for x in entry1_subfolders]
+            if len(entry2_subfolders) == 0:
+                entry2_subfolders = [Path(entry2)]
 
-                    if len(entry2_subfolders) == 0:
-                        entry2_subfolders = [Path(entry2)]
+            else:
+                entry2_subfolders = [Path(x) for x in entry2_subfolders]
 
-                    else:
-                        entry2_subfolders = [Path(entry2) / Path(x) for x in entry1_subfolders]
-
-                    kids = []
-                    for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
-                        kids.append(fid.calculate_kid(entry1_subfolders[min(len(entry1_subfolders)-1, i)],
-                                                      entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
+            kids = []
+            for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                kids.append(fid.compute_kid(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                            str(entry2_subfolders[min(len(entry2_subfolders)-1, i)])))
                         
-                    data = [[i, y] for (i, y) in enumerate(kids)]
-                    table = wandb.Table(data=data, columns = ["Epoch", "KID"])
-                    wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
-                               title=f"KID for {entry1} and {entry2}")})
+            data = [[i, y] for (i, y) in enumerate(kids)]
+            table = wandb.Table(data=data, columns = ["Epoch", "KID"])
+            wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
+                        title=f"KID for {entry1} and {entry2}")})
                         
                     
             
