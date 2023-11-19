@@ -1378,7 +1378,7 @@ def main(args):
                     if not class_validation_dir.exists():
                         class_validation_dir.mkdir(parents=True)
 
-                    for i in range(5):
+                    for i in range(args.num_validation_images):
                         with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, generator=generator).images[0]
                             image_filename = class_validation_dir / f"{epoch}-{i}.jpg"
@@ -1391,7 +1391,7 @@ def main(args):
                     if not instance_validation_dir.exists():
                         instance_validation_dir.mkdir(parents=True)
 
-                    for i in range(5):
+                    for i in range(args.num_validation_images):
                         with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, generator=generator).images[0]
                             image_filename = instance_validation_dir / f"{epoch}-{i}.jpg"
