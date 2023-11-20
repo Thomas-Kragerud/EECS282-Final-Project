@@ -1554,8 +1554,7 @@ def main(args):
                 table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
                 
                 wandb.log({f"{entry1}_{entry2}": wandb.plot.line(
-                    table, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}",
-                    lineColor="red")})
+                    table, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}")})
 
         
 
