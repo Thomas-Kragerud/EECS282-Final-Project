@@ -24,6 +24,8 @@ import os
 import shutil
 import warnings
 from pathlib import Path
+from cleanfid import fid
+from glob import glob
 
 import numpy as np
 import torch
@@ -164,11 +166,25 @@ def parse_args(input_args=None):
         help="A folder containing the training data of instance images.",
     )
     parser.add_argument(
+        "--instance_validation_dir",
+        type=str,
+        default=None,
+        required=True,
+        help="A folder containing generated instance images during training.",
+    )
+    parser.add_argument(
         "--class_data_dir",
         type=str,
         default=None,
         required=False,
         help="A folder containing the training data of class images.",
+    )
+    parser.add_argument(
+        "--class_validation_dir",
+        type=str,
+        default=None,
+        required=False,
+        help="A folder containing the validation data of class images.",
     )
     parser.add_argument(
         "--instance_prompt",
@@ -442,6 +458,13 @@ def parse_args(input_args=None):
         default=4,
         help=("The dimension of the LoRA update matrices."),
     )
+    parser.add_argument(
+        "--validation_data_dir",
+        type=str,
+        default=None,
+        required=False,
+        help="A folder containing the images generated for validation.",
+    ) 
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -1278,6 +1301,7 @@ def main(args):
                     text_encoder=None if args.pre_compute_text_embeddings else accelerator.unwrap_model(text_encoder),
                     revision=args.revision,
                     torch_dtype=weight_dtype,
+                    safety_checker=None,
                 )
 
                 # We train on the simplified learning objective. If we were previously predicting a variance, we need the scheduler to ignore it
@@ -1311,7 +1335,7 @@ def main(args):
                 if args.validation_images is None:
                     images = []
                     for _ in range(args.num_validation_images):
-                        with torch.cuda.amp.autocast():
+                        with torch.cuda.amp.autocast(): # Er dette problematisk når vi kjører gpu?
                             image = pipeline(**pipeline_args, generator=generator).images[0]
                             images.append(image)
                 else:
@@ -1320,7 +1344,7 @@ def main(args):
                         image = Image.open(image)
                         with torch.cuda.amp.autocast():
                             image = pipeline(**pipeline_args, image=image, generator=generator).images[0]
-                        images.append(image)
+                            images.append(image)
 
                 for tracker in accelerator.trackers:
                     if tracker.name == "tensorboard":
@@ -1335,6 +1359,45 @@ def main(args):
                                 ]
                             }
                         )
+
+                if args.validation_data_dir is not None:
+                    # Save images to directory
+                    validation_dir = Path(args.validation_data_dir) / Path(str(epoch))
+                    if not validation_dir.exists():
+                        validation_dir.mkdir(parents=True)
+
+                    for i, image in enumerate(images):
+                        image_filename = validation_dir / f"{epoch}-{i}.jpg"
+                        image.save(image_filename)
+
+                if args.class_validation_dir is not None:
+
+                    pipeline_args = {"prompt": args.class_prompt}
+
+                    # Save images to directory
+                    class_validation_dir = Path(args.class_validation_dir) / Path(str(epoch))
+                    if not class_validation_dir.exists():
+                        class_validation_dir.mkdir(parents=True)
+
+                    for i in range(args.num_validation_images):
+                        with torch.cuda.amp.autocast():
+                            image = pipeline(**pipeline_args, generator=generator).images[0]
+                            image_filename = class_validation_dir / f"{epoch}-{i}.jpg"
+                            image.save(image_filename)
+
+                if args.instance_validation_dir is not None:
+
+                    pipeline_args = {"prompt": args.instance_prompt}
+                    instance_validation_dir = Path(args.instance_validation_dir) / Path(str(epoch))
+                    if not instance_validation_dir.exists():
+                        instance_validation_dir.mkdir(parents=True)
+
+                    for i in range(args.num_validation_images):
+                        with torch.cuda.amp.autocast():
+                            image = pipeline(**pipeline_args, generator=generator).images[0]
+                            image_filename = instance_validation_dir / f"{epoch}-{i}.jpg"
+                            image.save(image_filename)
+                        #image = pipeline(**pipeline_args, generator=generator).images[0]
 
                 del pipeline
                 torch.cuda.empty_cache()
@@ -1405,6 +1468,45 @@ def main(args):
                             ]
                         }
                     )
+
+        # Calculate KID
+        kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+        kid_entries_1 = [entry for entry in kid_entries_l if entry is not None]
+
+        kid_entries = set()
+        for e1 in kid_entries_l:
+            for e2 in kid_entries_1:
+                if e1 != e2:
+                    kid_entries.add(frozenset({e1, e2}))
+
+        for entry1, entry2 in kid_entries:
+        
+            entry1_subfolders = sorted(glob(entry1 + "/*/"))
+            entry2_subfolders = sorted(glob(entry2 + "/*/"))
+
+            if len(entry1_subfolders) == 0:
+                entry1_subfolders = [Path(entry1)]
+            else:
+                entry1_subfolders = [Path(x) for x in entry1_subfolders]
+
+            if len(entry2_subfolders) == 0:
+                entry2_subfolders = [Path(entry2)]
+
+            else:
+                entry2_subfolders = [Path(x) for x in entry2_subfolders]
+
+            kids = []
+            for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                kids.append(fid.compute_kid(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                            str(entry2_subfolders[min(len(entry2_subfolders)-1, i)])))
+                        
+            data = [[i, y] for (i, y) in enumerate(kids)]
+            table = wandb.Table(data=data, columns = ["Epoch", "KID"])
+            wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
+                        title=f"KID for {entry1} and {entry2}")})
+                        
+                    
+            
 
         if args.push_to_hub:
             save_model_card(
