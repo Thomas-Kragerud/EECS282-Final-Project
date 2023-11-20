@@ -29,6 +29,7 @@ from glob import glob
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
@@ -43,6 +44,9 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PretrainedConfig
+
+from transformers import AutoImageProcessor, AutoModel
+
 
 import diffusers
 from diffusers import (
@@ -465,6 +469,21 @@ def parse_args(input_args=None):
         required=False,
         help="A folder containing the images generated for validation.",
     ) 
+    parser.add_argument(
+        "--calculate_DINO",
+        type=bool,
+        default=False,
+        required=False,
+        help="Calculate and log DINO evaluation or not",
+    ) 
+    parser.add_argument(
+        "--calculate_KID",
+        type=bool,
+        default=False,
+        required=False,
+        help="Calculate and log KID evaluation or not",
+    ) 
+    
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -1468,6 +1487,84 @@ def main(args):
                             ]
                         }
                     )
+        if args.calculate_KID:
+            # Calculate KID
+            kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+            kid_entries_1 = [entry for entry in kid_entries_l if entry is not None]
+
+            kid_entries = set()
+            for e1 in kid_entries_l:
+                for e2 in kid_entries_1:
+                    if e1 != e2:
+                        kid_entries.add(frozenset({e1, e2}))
+
+            for entry1, entry2 in kid_entries:
+            
+                entry1_subfolders = sorted(glob(entry1 + "/*/"))
+                entry2_subfolders = sorted(glob(entry2 + "/*/"))
+
+                if len(entry1_subfolders) == 0:
+                    entry1_subfolders = [Path(entry1)]
+                else:
+                    entry1_subfolders = [Path(x) for x in entry1_subfolders]
+
+                if len(entry2_subfolders) == 0:
+                    entry2_subfolders = [Path(entry2)]
+
+                else:
+                    entry2_subfolders = [Path(x) for x in entry2_subfolders]
+
+                kids = []
+                for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                    kids.append(fid.compute_kid(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                                str(entry2_subfolders[min(len(entry2_subfolders)-1, i)])))
+                            
+                data = [[i, y] for (i, y) in enumerate(kids)]
+                table = wandb.Table(data=data, columns = ["Epoch", "KID"])
+                wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
+                            title=f"KID for {entry1} and {entry2}")})
+                            
+        
+        # Log DINO
+        if args.calculate_DINO:
+            print("Calculate DINO started")
+            # Define your entries
+            dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+            dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
+
+            dino_entries = set()
+            for e1 in dino_entries_l:
+                for e2 in dino_entries_1:
+                    if e1 != e2:
+                        dino_entries.add(frozenset({e1, e2}))
+
+            for entry1, entry2 in dino_entries:
+                entry1_subfolders = sorted(glob(str(entry1) + "/*/"))
+                entry2_subfolders = sorted(glob(str(entry2) + "/*/"))
+
+                if len(entry1_subfolders) == 0:
+                    entry1_subfolders = [Path(entry1)]
+                else:
+                    entry1_subfolders = [Path(x) for x in entry1_subfolders]
+
+                if len(entry2_subfolders) == 0:
+                    entry2_subfolders = [Path(entry2)]
+                else:
+                    entry2_subfolders = [Path(x) for x in entry2_subfolders]
+
+                similarities_dino = []
+                for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                    similarity_dino = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                                            str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
+                    similarities_dino.append(similarity_dino)
+                data_dino = [[i, y] for i, y in enumerate(similarities_dino)]
+                table2 = wandb.Table(data=data_dino, columns=["Epoch", "DINO"])
+                
+                wandb.log({f"{entry1}_{entry2}_DINO": wandb.plot.line(
+                    table2, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}")})
+
+        
+
 
         # Calculate KID
         kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
@@ -1527,6 +1624,39 @@ def main(args):
 
     accelerator.end_training()
 
+def dino_similarity(folder1, folder2):
+    print("In DINO function")
+    processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
+    model = AutoModel.from_pretrained('facebook/dinov2-base')
+    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+    def get_pooled_output(image_path):
+        image = Image.open(image_path)
+        inputs = processor(images=image, return_tensors="pt")
+        outputs = model(**inputs)
+        last_hidden_states = outputs.last_hidden_state
+        return torch.mean(last_hidden_states, dim=1)
+
+    folder1_images = [os.path.join(folder1, f) for f in os.listdir(folder1) if f.endswith(('.png', '.jpg', '.jpeg'))]
+    folder2_images = [os.path.join(folder2, f) for f in os.listdir(folder2) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    total_similarity = 0
+    num_comparisons = 0
+
+    for img1 in folder1_images:
+        pooled_output1 = get_pooled_output(img1)
+        for img2 in folder2_images:
+            pooled_output2 = get_pooled_output(img2)
+            similarity = cos(pooled_output1, pooled_output2).item()
+            total_similarity += similarity
+            num_comparisons += 1
+
+    if num_comparisons == 0:
+        print("Error in DINO fucntion")
+        return 0  # Return 0 if no comparisons were made
+
+    average_similarity = total_similarity / num_comparisons
+    return average_similarity
 
 if __name__ == "__main__":
     args = parse_args()
