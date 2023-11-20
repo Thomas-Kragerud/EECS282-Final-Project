@@ -1512,19 +1512,17 @@ def main(args):
         
         # Log DINO
 
-        # Assuming the calculate_folder_similarity function is already defined as above
-
         # Define your entries
-        kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
-        kid_entries_1 = [entry for entry in kid_entries_l if entry is not None]
+        dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+        dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
 
-        kid_entries = set()
-        for e1 in kid_entries_l:
-            for e2 in kid_entries_1:
+        dino_entries = set()
+        for e1 in dino_entries_l:
+            for e2 in dino_entries_1:
                 if e1 != e2:
-                    kid_entries.add(frozenset({e1, e2}))
+                    dino_entries.add(frozenset({e1, e2}))
 
-        for entry1, entry2 in kid_entries:
+        for entry1, entry2 in dino_entries:
             entry1_subfolders = sorted(glob(str(entry1) + "/*/"))
             entry2_subfolders = sorted(glob(str(entry2) + "/*/"))
 
