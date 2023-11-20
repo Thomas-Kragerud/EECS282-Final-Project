@@ -1545,16 +1545,16 @@ def main(args):
                 else:
                     entry2_subfolders = [Path(x) for x in entry2_subfolders]
 
-                similarities = []
+                similarities_dino = []
                 for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
-                    similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                    similarity_dino = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
                                                             str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
-                    similarities.append(similarity)
-                data = [[i, y] for i, y in enumerate(similarities)]
-                table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
+                    similarities_dino.append(similarity_dino)
+                data_dino = [[i, y] for i, y in enumerate(similarities_dino)]
+                table2 = wandb.Table(data=data_dino, columns=["Epoch", "DINO"])
                 
                 wandb.log({f"{entry1}_{entry2}": wandb.plot.line(
-                    table, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}")})
+                    table2, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}")})
 
         
 
