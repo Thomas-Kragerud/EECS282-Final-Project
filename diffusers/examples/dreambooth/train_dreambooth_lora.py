@@ -1520,6 +1520,7 @@ def main(args):
         
         # Log DINO
         if args.calculate_DINO:
+            print("Calculate DINO started")
             # Define your entries
             dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
             dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
@@ -1549,9 +1550,10 @@ def main(args):
                     similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
                                                             str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
                     similarities.append(similarity)
-                            
+                print("Logging DINO")
                 data = [[i, y] for i, y in enumerate(similarities)]
                 table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
+                
                 wandb.log({f"{entry1}_{entry2}": wandb.plot.line(table, "Epoch", "Similarity", title=f"Similarity for {entry1} and {entry2}")})
 
         
@@ -1577,6 +1579,7 @@ def main(args):
     accelerator.end_training()
 
 def dino_similarity(folder1, folder2):
+    print("In DINO function")
     processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
     model = AutoModel.from_pretrained('facebook/dinov2-base')
     cos = nn.CosineSimilarity(dim=1, eps=1e-6)
@@ -1603,9 +1606,11 @@ def dino_similarity(folder1, folder2):
             num_comparisons += 1
 
     if num_comparisons == 0:
+        print("Error in DINO fucntion")
         return 0  # Return 0 if no comparisons were made
 
     average_similarity = total_similarity / num_comparisons
+    print("DINO passed")
     return average_similarity
 
 if __name__ == "__main__":
