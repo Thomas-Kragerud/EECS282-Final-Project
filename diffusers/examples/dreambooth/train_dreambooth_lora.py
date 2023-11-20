@@ -1550,11 +1550,12 @@ def main(args):
                     similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
                                                             str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
                     similarities.append(similarity)
-                print("Logging DINO")
                 data = [[i, y] for i, y in enumerate(similarities)]
                 table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
                 
-                wandb.log({f"{entry1}_{entry2}": wandb.plot.line(table, "Epoch", "Similarity", title=f"Similarity for {entry1} and {entry2}")})
+                wandb.log({f"{entry1}_{entry2}": wandb.plot.line(
+                    table, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}",
+                    opts={"lineColor": "red"})})
 
         
 
@@ -1610,7 +1611,6 @@ def dino_similarity(folder1, folder2):
         return 0  # Return 0 if no comparisons were made
 
     average_similarity = total_similarity / num_comparisons
-    print("DINO passed")
     return average_similarity
 
 if __name__ == "__main__":
