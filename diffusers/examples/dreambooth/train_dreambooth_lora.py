@@ -469,6 +469,14 @@ def parse_args(input_args=None):
         required=False,
         help="A folder containing the images generated for validation.",
     ) 
+    parser.add_argument(
+        "--calculate_DINO",
+        type=bool,
+        default=False,
+        required=False,
+        help="Calculate DINO evaluation or not",
+    ) 
+    
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -1511,42 +1519,42 @@ def main(args):
                         
         
         # Log DINO
+        if args.calculate_DINO:
+            # Define your entries
+            dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+            dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
 
-        # Define your entries
-        dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
-        dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
+            dino_entries = set()
+            for e1 in dino_entries_l:
+                for e2 in dino_entries_1:
+                    if e1 != e2:
+                        dino_entries.add(frozenset({e1, e2}))
 
-        dino_entries = set()
-        for e1 in dino_entries_l:
-            for e2 in dino_entries_1:
-                if e1 != e2:
-                    dino_entries.add(frozenset({e1, e2}))
+            for entry1, entry2 in dino_entries:
+                entry1_subfolders = sorted(glob(str(entry1) + "/*/"))
+                entry2_subfolders = sorted(glob(str(entry2) + "/*/"))
 
-        for entry1, entry2 in dino_entries:
-            entry1_subfolders = sorted(glob(str(entry1) + "/*/"))
-            entry2_subfolders = sorted(glob(str(entry2) + "/*/"))
+                if len(entry1_subfolders) == 0:
+                    entry1_subfolders = [Path(entry1)]
+                else:
+                    entry1_subfolders = [Path(x) for x in entry1_subfolders]
 
-            if len(entry1_subfolders) == 0:
-                entry1_subfolders = [Path(entry1)]
-            else:
-                entry1_subfolders = [Path(x) for x in entry1_subfolders]
+                if len(entry2_subfolders) == 0:
+                    entry2_subfolders = [Path(entry2)]
+                else:
+                    entry2_subfolders = [Path(x) for x in entry2_subfolders]
 
-            if len(entry2_subfolders) == 0:
-                entry2_subfolders = [Path(entry2)]
-            else:
-                entry2_subfolders = [Path(x) for x in entry2_subfolders]
+                similarities = []
+                for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                    similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                                            str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
+                    similarities.append(similarity)
+                            
+                data = [[i, y] for i, y in enumerate(similarities)]
+                table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
+                wandb.log({f"{entry1}_{entry2}": wandb.plot.line(table, "Epoch", "Similarity", title=f"Similarity for {entry1} and {entry2}")})
 
-            similarities = []
-            for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
-                similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
-                                                        str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
-                similarities.append(similarity)
-                        
-            data = [[i, y] for i, y in enumerate(similarities)]
-            table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
-            wandb.log({f"{entry1}_{entry2}": wandb.plot.line(table, "Epoch", "Similarity", title=f"Similarity for {entry1} and {entry2}")})
-
-    
+        
 
 
         if args.push_to_hub:
