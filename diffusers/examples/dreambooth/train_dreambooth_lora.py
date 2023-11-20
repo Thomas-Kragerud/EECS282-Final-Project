@@ -1560,7 +1560,7 @@ def main(args):
                 data_dino = [[i, y] for i, y in enumerate(similarities_dino)]
                 table2 = wandb.Table(data=data_dino, columns=["Epoch", "DINO"])
                 
-                wandb.log({f"{entry1}_{entry2}": wandb.plot.line(
+                wandb.log({f"{entry1}_{entry2}_DINO": wandb.plot.line(
                     table2, "Epoch", "DINO", title=f"Similarity for {entry1} and {entry2}")})
 
         
