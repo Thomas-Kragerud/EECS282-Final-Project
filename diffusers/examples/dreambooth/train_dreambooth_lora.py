@@ -29,6 +29,7 @@ from glob import glob
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
@@ -43,6 +44,9 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PretrainedConfig
+
+from transformers import AutoImageProcessor, AutoModel
+
 
 import diffusers
 from diffusers import (
@@ -1505,8 +1509,47 @@ def main(args):
             wandb.log({entry1+entry2 : wandb.plot.line(table, "Epoch", "KID",
                         title=f"KID for {entry1} and {entry2}")})
                         
-                    
-            
+        
+        # Log DINO
+
+        # Assuming the calculate_folder_similarity function is already defined as above
+
+        # Define your entries
+        kid_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
+        kid_entries_1 = [entry for entry in kid_entries_l if entry is not None]
+
+        kid_entries = set()
+        for e1 in kid_entries_l:
+            for e2 in kid_entries_1:
+                if e1 != e2:
+                    kid_entries.add(frozenset({e1, e2}))
+
+        for entry1, entry2 in kid_entries:
+            entry1_subfolders = sorted(glob(str(entry1) + "/*/"))
+            entry2_subfolders = sorted(glob(str(entry2) + "/*/"))
+
+            if len(entry1_subfolders) == 0:
+                entry1_subfolders = [Path(entry1)]
+            else:
+                entry1_subfolders = [Path(x) for x in entry1_subfolders]
+
+            if len(entry2_subfolders) == 0:
+                entry2_subfolders = [Path(entry2)]
+            else:
+                entry2_subfolders = [Path(x) for x in entry2_subfolders]
+
+            similarities = []
+            for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
+                similarity = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                                                        str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
+                similarities.append(similarity)
+                        
+            data = [[i, y] for i, y in enumerate(similarities)]
+            table = wandb.Table(data=data, columns=["Epoch", "Similarity"])
+            wandb.log({f"{entry1}_{entry2}": wandb.plot.line(table, "Epoch", "Similarity", title=f"Similarity for {entry1} and {entry2}")})
+
+    
+
 
         if args.push_to_hub:
             save_model_card(
@@ -1527,6 +1570,37 @@ def main(args):
 
     accelerator.end_training()
 
+def dino_similarity(folder1, folder2):
+    processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
+    model = AutoModel.from_pretrained('facebook/dinov2-base')
+    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+    def get_pooled_output(image_path):
+        image = Image.open(image_path)
+        inputs = processor(images=image, return_tensors="pt")
+        outputs = model(**inputs)
+        last_hidden_states = outputs.last_hidden_state
+        return torch.mean(last_hidden_states, dim=1)
+
+    folder1_images = [os.path.join(folder1, f) for f in os.listdir(folder1) if f.endswith(('.png', '.jpg', '.jpeg'))]
+    folder2_images = [os.path.join(folder2, f) for f in os.listdir(folder2) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    total_similarity = 0
+    num_comparisons = 0
+
+    for img1 in folder1_images:
+        pooled_output1 = get_pooled_output(img1)
+        for img2 in folder2_images:
+            pooled_output2 = get_pooled_output(img2)
+            similarity = cos(pooled_output1, pooled_output2).item()
+            total_similarity += similarity
+            num_comparisons += 1
+
+    if num_comparisons == 0:
+        return 0  # Return 0 if no comparisons were made
+
+    average_similarity = total_similarity / num_comparisons
+    return average_similarity
 
 if __name__ == "__main__":
     args = parse_args()
