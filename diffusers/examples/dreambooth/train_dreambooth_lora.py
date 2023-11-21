@@ -47,6 +47,8 @@ from transformers import AutoTokenizer, PretrainedConfig
 
 from transformers import AutoImageProcessor, AutoModel
 
+from dino_similarity import DinoSimilarity
+
 
 import diffusers
 from diffusers import (
@@ -1528,6 +1530,9 @@ def main(args):
         # Log DINO
         if args.calculate_DINO:
             print("Calculate DINO started")
+
+            din_similarity_computer = DinoSimilarity(resolution=args.resolution)
+
             # Define your entries
             dino_entries_l = [args.validation_data_dir, args.class_validation_dir, args.instance_validation_dir, args.class_data_dir, args.instance_data_dir]
             dino_entries_1 = [entry for entry in dino_entries_l if entry is not None]
@@ -1554,9 +1559,10 @@ def main(args):
 
                 similarities_dino = []
                 for i in range(max(len(entry1_subfolders), len(entry2_subfolders))):
-                    similarity_dino = dino_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
+                    similarity_dino = din_similarity_computer.run_similarity(str(entry1_subfolders[min(len(entry1_subfolders)-1, i)]),
                                                             str(entry2_subfolders[min(len(entry2_subfolders)-1, i)]))
                     similarities_dino.append(similarity_dino)
+
                 data_dino = [[i, y] for i, y in enumerate(similarities_dino)]
                 table2 = wandb.Table(data=data_dino, columns=["Epoch", "DINO"])
                 
@@ -1623,40 +1629,6 @@ def main(args):
             )
 
     accelerator.end_training()
-
-def dino_similarity(folder1, folder2):
-    print("In DINO function")
-    processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
-    model = AutoModel.from_pretrained('facebook/dinov2-base')
-    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
-
-    def get_pooled_output(image_path):
-        image = Image.open(image_path)
-        inputs = processor(images=image, return_tensors="pt")
-        outputs = model(**inputs)
-        last_hidden_states = outputs.last_hidden_state
-        return torch.mean(last_hidden_states, dim=1)
-
-    folder1_images = [os.path.join(folder1, f) for f in os.listdir(folder1) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    folder2_images = [os.path.join(folder2, f) for f in os.listdir(folder2) if f.endswith(('.png', '.jpg', '.jpeg'))]
-
-    total_similarity = 0
-    num_comparisons = 0
-
-    for img1 in folder1_images:
-        pooled_output1 = get_pooled_output(img1)
-        for img2 in folder2_images:
-            pooled_output2 = get_pooled_output(img2)
-            similarity = cos(pooled_output1, pooled_output2).item()
-            total_similarity += similarity
-            num_comparisons += 1
-
-    if num_comparisons == 0:
-        print("Error in DINO fucntion")
-        return 0  # Return 0 if no comparisons were made
-
-    average_similarity = total_similarity / num_comparisons
-    return average_similarity
 
 if __name__ == "__main__":
     args = parse_args()
