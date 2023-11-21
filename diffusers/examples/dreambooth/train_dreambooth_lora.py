@@ -68,7 +68,7 @@ from diffusers.optimization import get_scheduler
 from diffusers.training_utils import unet_lora_state_dict
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
-
+from torchvision.transforms import Compose, Resize, ToTensor
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.24.0.dev0")
@@ -1590,34 +1590,54 @@ def dino_similarity(folder1, folder2):
     processor = AutoImageProcessor.from_pretrained('facebook/dinov2-base')
     model = AutoModel.from_pretrained('facebook/dinov2-base')
     cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+    
+    folder1_images = folder2tensor(folder1)
+    folder2_images = folder2tensor(folder2)
+    inputs1 = processor(images=folder1_images, return_tensors="pt")
+    inputs2 = processor(images=folder2_images, return_tensors="pt")
 
-    def get_pooled_output(image_path):
-        image = Image.open(image_path)
-        inputs = processor(images=image, return_tensors="pt")
-        outputs = model(**inputs)
-        last_hidden_states = outputs.last_hidden_state
-        return torch.mean(last_hidden_states, dim=1)
+    outputs1 = model(**inputs1)
+    outputs2 = model(**inputs2)
+    last_hidden_states1 = outputs1.last_hidden_state
+    last_hidden_states2 = outputs2.last_hidden_state
+    out1 = last_hidden_states1
+    out2 = last_hidden_states2
+    print(f'{out1.shape}, {out2.shape}')
+    sim = []
+    for i in out1:
+        for j in out2:
+            sim.append(torch.mean(cos(i,j)).item())
+    return np.mean(np.array(sim))
+    
+def folder2tensor(directory):
+    # Define the transformation
+    n = 512
+    transform = Compose([
+        Resize((n, n)),
+        ToTensor()
+    ])
 
-    folder1_images = [os.path.join(folder1, f) for f in os.listdir(folder1) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    folder2_images = [os.path.join(folder2, f) for f in os.listdir(folder2) if f.endswith(('.png', '.jpg', '.jpeg'))]
+    # List to hold processed tensors
+    tensors = []
 
-    total_similarity = 0
-    num_comparisons = 0
+    # Iterate over all images in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
+            path = os.path.join(directory, filename)
+            with Image.open(path).convert('RGB') as image:
+                # Apply the transformation
+                tensor = transform(image)
+                tensors.append(tensor)
 
-    for img1 in folder1_images:
-        pooled_output1 = get_pooled_output(img1)
-        for img2 in folder2_images:
-            pooled_output2 = get_pooled_output(img2)
-            similarity = cos(pooled_output1, pooled_output2).item()
-            total_similarity += similarity
-            num_comparisons += 1
+    # Stack all tensors to create a batch
+    if tensors:
+        batch_tensor = torch.stack(tensors)
+    else:
+        raise RuntimeError("No images found in the directory")
 
-    if num_comparisons == 0:
-        print("Error in DINO fucntion")
-        return 0  # Return 0 if no comparisons were made
+    return batch_tensor
 
-    average_similarity = total_similarity / num_comparisons
-    return average_similarity
+
 
 if __name__ == "__main__":
     args = parse_args()
