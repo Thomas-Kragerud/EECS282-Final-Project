@@ -14,6 +14,7 @@ class CustomImageDataset(torch.utils.data.Dataset):
 
         self.transform = transforms.Compose([
                                 transforms.Resize(resolution),
+                                transforms.CenterCrop((resolution, resolution)),
                                 transforms.ToTensor()
                                ])
 
