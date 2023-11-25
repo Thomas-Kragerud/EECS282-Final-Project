@@ -7,6 +7,9 @@
           <mappings>
             <mapping deploy="/home/ubuntu/FinalProject/EECS282-Final-Project" local="$PROJECT_DIR$" />
           </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/FineTuning/full_mod_base/out" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>
