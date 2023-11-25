@@ -4,11 +4,13 @@ import subprocess
 def main():
 
     # path to training file
-    train_file_path = "../../diffusers/examples/dreambooth/train_dreambooth.py"
+    #train_file_path = "../../diffusers/examples/dreambooth/train_dreambooth.py"
+    train_file_path = "/Users/thomas/eecs282/FinalProject/diffusers/examples/dreambooth/train_dreambooth.py"
+
 
     # Set environment variables
     os.environ['MODEL_NAME'] = "CompVis/stable-diffusion-v1-4"
-    os.environ['INSTANCE_DIR'] = "dog"
+    os.environ['INSTANCE_DIR'] = "dog_images"
     os.environ['OUTPUT_DIR'] = "out"
 
     # Construct the command
@@ -32,5 +34,5 @@ def main():
     subprocess.run(command, shell=True)
 
 if __name__ == "__main__":
-    print("yoooo")
+    print("test2")
     main()

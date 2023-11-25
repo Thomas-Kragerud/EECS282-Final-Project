@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="ubuntu@150.136.68.4:22 key (8)" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="ubuntu@129.146.110.51:22 key" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="ubuntu@129.146.110.51:22 key">
         <serverdata>
@@ -9,63 +9,7 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="ubuntu@150.136.68.4:22 key">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_300" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (2)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_807" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (3)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_752" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (4)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_855" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (5)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_441" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (6)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/tmp/pycharm_project_674" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (7)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/home/ubuntu/TestQLORA/EECS282-Final-Project" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="ubuntu@150.136.68.4:22 key (8)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/home/ubuntu/TestQLORA/EECS282-Final-Project" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
     </serverData>
-    <option name="myAutoUpload" value="ALWAYS" />
+    <option name="myAutoUpload" value="ON_EXPLICIT_SAVE" />
   </component>
 </project>
