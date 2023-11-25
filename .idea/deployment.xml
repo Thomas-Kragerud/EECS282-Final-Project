@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="ubuntu@150.136.68.4:22 key (4)" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="ubuntu@150.136.68.4:22 key (8)" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="ubuntu@150.136.68.4:22 key">
         <serverdata>
@@ -27,6 +27,34 @@
         <serverdata>
           <mappings>
             <mapping deploy="/tmp/pycharm_project_855" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="ubuntu@150.136.68.4:22 key (5)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/pycharm_project_441" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="ubuntu@150.136.68.4:22 key (6)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/pycharm_project_674" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="ubuntu@150.136.68.4:22 key (7)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/TestQLORA/EECS282-Final-Project" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="ubuntu@150.136.68.4:22 key (8)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/TestQLORA/EECS282-Final-Project" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
