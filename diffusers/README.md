@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-### Special instructions for CS182/282A run
+# Special instructions for CS182/282A run
 
-Use the notebook in the root directory named "train_lora.py", and run it in google collab. The notebook will run finetuning on LoRA with Dreambooth, and also do evaluation and log to wandb.
+### Use the notebook in the root directory named "train_lora.py", and run it in google collab. The notebook will run finetuning on LoRA with Dreambooth, and also do evaluation and log to wandb.
+
+# Original README.md
 
 <p align="center">
     <br>
