@@ -20,7 +20,7 @@ limitations under the License.
 Use the notebook in the root directory named "train_lora.ipynb", and run it in google collab. The notebook will run finetuning on LoRA with Dreambooth, and also do evaluation and log to wandb.
 
 ### For inference
-Use the notebook in the root directory named "run_model.ipynb". Here one can write prompts and models is saved in the outputimages-folder.
+Use the notebook in the root directory named "run_model.ipynb". Here one can write prompts and models is saved in the outputimages-folder. To generate images of the personalized shoe, write "sks shoe".
 
 # Original README.md
 
