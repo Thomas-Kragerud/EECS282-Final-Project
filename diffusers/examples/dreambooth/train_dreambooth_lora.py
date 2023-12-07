@@ -936,7 +936,7 @@ def main(args):
             unet_lora_parameters.extend(attn_module.add_k_proj.lora_layer.parameters())
             unet_lora_parameters.extend(attn_module.add_v_proj.lora_layer.parameters())
 
-    print("Tainable parameters in LoRA layers: ", len(unet_lora_parameters))
+    print("Tainable parameters in LoRA layers: ", sum(p.numel() for p in unet_lora_parameters if p.requires_grad))
     input("Press enter to continue...")
 
     # The text encoder comes from 🤗 transformers, so we cannot directly modify it.
