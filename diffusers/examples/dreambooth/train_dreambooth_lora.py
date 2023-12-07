@@ -936,6 +936,12 @@ def main(args):
             unet_lora_parameters.extend(attn_module.add_k_proj.lora_layer.parameters())
             unet_lora_parameters.extend(attn_module.add_v_proj.lora_layer.parameters())
 
+    trainable_parameters = 0
+    for x in unet_lora_parameters:
+        trainable_parameters = sum(p.numel() for p in x.parameters() if p.requires_grad)
+    print("Tainable parameters in LoRA layers: ", trainable_parameters)
+    input("Press enter to continue...")
+
     # The text encoder comes from 🤗 transformers, so we cannot directly modify it.
     # So, instead, we monkey-patch the forward calls of its attention-blocks.
     if args.train_text_encoder:
