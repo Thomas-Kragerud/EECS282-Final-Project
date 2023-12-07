@@ -4,7 +4,7 @@ import subprocess
 def main():
 
     # path to training file
-    train_file_path = "diffusers/examples/dreambooth/train_dreambooth.py"
+    train_file_path = "../../../diffusers/examples/dreambooth/train_dreambooth.py"
     #train_file_path = "/Users/thomas/eecs282/FinalProject/diffusers/examples/dreambooth/train_dreambooth.py"
 
 
